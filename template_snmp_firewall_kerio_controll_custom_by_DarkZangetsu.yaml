@@ -1,0 +1,503 @@
+zabbix_export:
+  version: '6.0'
+  date: '2024-10-03T21:42:42Z'
+  groups:
+    - uuid: 6901b615541642829e464fb6d2a7de5f
+      name: Template/CustomKerioFR
+  templates:
+    - uuid: 57b0bdc49935481d80d0a58066243d39
+      template: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+      name: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+      description: |
+        ## Auteur
+
+        DarkZangetsu
+      groups:
+        - name: Template/CustomKerioFR
+      items:
+        - uuid: eb2faa0d0ca3451ca79f276b345eacb1
+          name: Disponibilité
+          type: SIMPLE
+          key: icmpping
+          delay: 30s
+          history: 60d
+          trends: 90d
+          value_type: FLOAT
+          tags:
+            - tag: Application
+              value: 'Informations de Disponibilité'
+          triggers:
+            - uuid: 79b556f02b824672be7f7172acc59242
+              expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+              name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+              priority: DISASTER
+              manual_close: 'YES'
+        - uuid: 0a81d4cf97e54839aef32ce66f38ec91
+          name: 'Perte de Paquet (pourcentage)'
+          type: SIMPLE
+          key: icmppingloss
+          delay: 30s
+          history: 60d
+          trends: 90d
+          value_type: FLOAT
+          units: '%'
+          tags:
+            - tag: Application
+              value: 'Informations de Disponibilité'
+          triggers:
+            - uuid: e78a450acdc74531adc3c2ec3512248e
+              expression: 'min(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmppingloss,5m)>5'
+              name: 'La perte de paquet sur le serveur {HOST.NAME} est trop élevée !'
+              priority: WARNING
+              manual_close: 'YES'
+              dependencies:
+                - name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+                  expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+        - uuid: 2f4b251195a4409aad9748cdd70e7f29
+          name: Latence
+          type: SIMPLE
+          key: icmppingsec
+          delay: 30s
+          history: 60d
+          trends: 90d
+          value_type: FLOAT
+          units: s
+          tags:
+            - tag: Application
+              value: 'Informations de Disponibilité'
+          triggers:
+            - uuid: 6cc2a15aee2d4a2cb97e0e0c56defc20
+              expression: 'avg(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmppingsec,5m)>0.15'
+              name: 'Le temps de réponse est trop élevé sur {HOST.NAME}'
+              priority: WARNING
+              manual_close: 'YES'
+              dependencies:
+                - name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+                  expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+        - uuid: c69dfb5b6b564133ac6324ce92439319
+          name: 'Temps Allumé'
+          type: SNMP_AGENT
+          snmp_oid: .1.3.6.1.2.1.1.3.0
+          key: sysUpTimeInstance.0
+          delay: '600'
+          history: 60d
+          trends: 90d
+          units: 'durée de fonctionnement'
+          tags:
+            - tag: Application
+              value: 'Informations de Disponibilité'
+          triggers:
+            - uuid: ce33a88335ad48b1aec161fb27cbf1a2
+              expression: 'change(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/sysUpTimeInstance.0)<0'
+              name: 'Le Pare-feu {HOST.NAME} a redémarré !'
+              priority: INFO
+              manual_close: 'YES'
+              dependencies:
+                - name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+                  expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+      discovery_rules:
+        - uuid: e8e8f21663474dcd887c35031a91f426
+          name: 'Découverte LLD Informations Processeur Pare-feu'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},.1.3.6.1.2.1.1.1]'
+          key: fgHaStatsCpuUsages.discovery
+          delay: '84600'
+          lifetime: '0'
+          item_prototypes:
+            - uuid: 3192ef2a8fb848f1876988e36c22f774
+              name: "Informations d'utilisation du processeur du Firewall {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: .1.3.6.1.4.1.2021.10.1.3.1
+              key: 'fgHaStatsCpuUsage.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              units: '%'
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation du processeur du firewall {#SNMPVALUE}"
+              trigger_prototypes:
+                - uuid: 7dbeaa05d7244c8b912b7cb1334d6a92
+                  expression: 'last(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/fgHaStatsCpuUsage.[{#SNMPVALUE}])>1000'
+                  name: "L'utilisation de la mémoire du firewall {HOST.NAME} est très élevée !"
+                  priority: HIGH
+                  manual_close: 'YES'
+                  dependencies:
+                    - name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+                      expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+
+          graph_prototypes:
+            - uuid: 1f973f4685a945d9a770b2e618487c53
+              name: '05 - processeur {#SNMPVALUE}'
+              graph_items:
+                - drawtype: GRADIENT_LINE
+                  color: 1A7C11
+                  item:
+                    host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+                    key: 'fgHaStatsCpuUsage.[{#SNMPVALUE}]'
+        - uuid: fe3e4383c2044216a727bbdc07d800a6
+          name: 'Découverte LLD Inventaire Matériel'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},.1.3.6.1.2.1.1.5]'
+          key: fgHaStatsHostname.discovery
+          delay: '84600'
+          lifetime: '0'
+          item_prototypes:
+            - uuid: db836fe9b7634c8e9af663d2ba73cb24
+              name: "Nom d'hôte du Firewall {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.5.{#SNMPINDEX}'
+              key: 'fgHaStatsHostnameMagnao.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: TEXT
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire du Firewall {#SNMPVALUE}"
+            - uuid: 181ff71433fd4a28bf6bbffa549f13f6
+              name: 'Version du Firewall {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.1.{#SNMPINDEX}'
+              key: 'xg-firewallVersion.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: TEXT
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire du Firewall {#SNMPVALUE}"
+        - uuid: 0c49bfe584e049569203c8f58d99649b
+          name: 'Découverte LLD Informations Mémoire Firewall'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},.1.3.6.1.2.1.1.1]'
+          key: fgHaStatsMemUsage2.discovery
+          delay: '84600'
+          lifetime: '0'
+          item_prototypes:
+            - uuid: c4fa9f0f9c20499ea5fabe529dc8b138
+              name: 'Mémoire utilisée en % {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.6.{#SNMPINDEX}'
+              key: 'fgHaStatsMemUsage.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              units: B
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation de la mémoire {#SNMPVALUE}"
+              trigger_prototypes:
+                - uuid: f88248bcb96e4d18880360a5854886a1
+                  expression: 'last(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/fgHaStatsMemUsage.[{#SNMPVALUE}])>1000'
+                  name: "L'utilisation de la mémoire du firewall {HOST.NAME} est très élevée !"
+                  priority: HIGH
+                  manual_close: 'YES'
+                  dependencies:
+                    - name: 'Le Pare-feu {HOST.NAME} ne répond pas au Ping'
+                      expression: 'max(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/icmpping,#3)=0'
+
+            - uuid: be637597ed15410da26bbbc0c94a5847
+              name: 'Utilisation de la mémoire en cache du Firewall {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.15.{#SNMPINDEX}'
+              key: 'highMemUsage.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              units: B
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '1024'
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation de la mémoire {#SNMPVALUE}"
+            - uuid: 190cd3b287bd4f1186078a8ad7edf9a7
+              name: 'Mémoire totale du Firewall {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.5.{#SNMPINDEX}'
+              key: 'hrMemorySize.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: 90d
+              units: B
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '1024'
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation de la mémoire {#SNMPVALUE}"
+            - uuid: 3e618e9469ab4c058538297cbd1cb33e
+              name: 'Utilisation de la mémoire en buffer du Firewall {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.14.{#SNMPINDEX}'
+              key: 'memBuffer.[{#SNMPVALUE}]'
+              delay: 30s
+              history: 60d
+              trends: 90d
+              units: B
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '1024'
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation de la mémoire {#SNMPVALUE}"
+            - uuid: d70697437ea9428d8cdf176eef78b1c4
+              name: 'Utilisation de la mémoire partagée du Firewall {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.13.{#SNMPINDEX}'
+              key: 'memShared.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              units: B
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '1024'
+              tags:
+                - tag: Application
+                  value: "Informations d'utilisation de la mémoire {#SNMPVALUE}"
+            - uuid: e636553ca0604897861ae8666ee19726
+              name: 'Mémoire Totale Libre du Pare-feu {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.4.1.2021.4.11.{#SNMPINDEX}'
+              key: 'memTotalFree.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              units: B
+              preprocessing:
+                - type: MULTIPLIER
+                  parameters:
+                    - '1024'
+              tags:
+                - tag: Application
+                  value: "Informations sur l'utilisation de la mémoire {#SNMPVALUE}"
+          graph_prototypes:
+            - uuid: e2b82f395f0340cd830b39e857421bef
+              name: '06 - Utilisation de la mémoire {#SNMPVALUE}'
+              graph_items:
+                - drawtype: GRADIENT_LINE
+                  color: 1A7C11
+                  item:
+                    host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+                    key: 'fgHaStatsMemUsage.[{#SNMPVALUE}]'
+        - uuid: d5eeacc8314e42469293d01ecdc0b68d
+          name: "Découverte LLD de l'Interface Réseau du Pare-feu"
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},.1.3.6.1.2.1.2.2.1.2,{#REMOVEPLACAOFF},.1.3.6.1.2.1.2.2.1.7]'
+          key: FwIfName.discovery
+          delay: '84600'
+          lifetime: '0'
+          item_prototypes:
+            - uuid: 7967e5e673894623b99ee1c54d991584
+              name: "Statut Administratif de l'Interface Réseau {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.7.{#SNMPINDEX}'
+              key: 'ifAdminStatus.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              trends: 90d
+              valuemap:
+                name: 'IF-MIB::ifOperStatus'
+              tags:
+                - tag: Application
+                  value: "Informations de l'interface réseau {#SNMPVALUE}"
+              trigger_prototypes:
+                - uuid: 174170ce7ea14469b06c95637261e76b
+                  expression: 'last(/SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0/ifAdminStatus.[{#SNMPVALUE}])<>1'
+                  name: "L'Interface réseau {#SNMPVALUE} est Hors Ligne !"
+                  priority: DISASTER
+                  manual_close: 'YES'
+
+            - uuid: 94fc6d6bbe674466b88b036ab0db4cb3
+              name: "Alias de l'Interface Réseau {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.1.{#SNMPINDEX}'
+              key: 'ifAlias.[{#SNMPINDEX}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations de l'interface réseau {#SNMPVALUE}"
+            - uuid: cafd1bd867a04ccd975bfb663661a546
+              name: "Trafic d'Entrée sur l'Interface {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.10.{#SNMPINDEX}'
+              key: 'ifInOctets.[{#SNMPVALUE}]'
+              delay: '600'
+              history: 60d
+              units: bps
+              tags:
+                - tag: Application
+                  value: "Informations de l'interface réseau {#SNMPVALUE}"
+            - uuid: 31a0debb571c4ddeb780d2d37cd62d8f
+              name: "Description de l'Interface Réseau {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.2.{#SNMPINDEX}'
+              key: 'ifName.[{#SNMPINDEX}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'interface réseau {#SNMPVALUE}"
+            - uuid: 4cfba770281249dc8114a27c0f8078c6
+              name: "Trafic Sortant de l'interface {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.16.{#SNMPINDEX}'
+              key: 'ifOutOctets.[{#SNMPVALUE}]'
+              delay: '600;60s/1-5,07:00-19:00'
+              history: 60d
+              units: bps
+              tags:
+                - tag: Application
+                  value: "Informations d'interface réseau {#SNMPVALUE}"
+            - uuid: de64589767c840e2ad4130afab6d5453
+              name: "Adresse Mac de l'Interface Réseau {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.6.{#SNMPINDEX}'
+              key: 'ifPhysAddress.[{#SNMPINDEX}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'interface réseau {#SNMPVALUE}"
+            - uuid: 7bd86c40755142f6b04f321aaf0b0a83
+              name: "Type d'Interface Réseau {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.2.2.1.3.{#SNMPINDEX}'
+              key: 'ifType.[{#SNMPINDEX}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'interface réseau {#SNMPVALUE}"
+        - uuid: d53772f6a5e74250bce1edad3248e5a5
+          name: 'Découverte LLD Description du Pare-feu'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#SNMPVALUE},.1.3.6.1.2.1.1.1]'
+          key: sysDescr.discovery
+          delay: '84600'
+          lifetime: '0'
+          item_prototypes:
+            - uuid: 99fd8002023e4b0499525c6d9e449cec
+              name: 'Quantité de services sur le Pare-feu {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.7.{#SNMPINDEX}'
+              key: 'ifNumber.[{#SNMPVALUE}]'
+              delay: '60'
+              history: 60d
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire matériel {#SNMPVALUE}"
+            - uuid: eae03304086d406d9924776bce3adbc0
+              name: 'Informations de Contact du Pare-feu {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.4.{#SNMPINDEX}'
+              key: 'sysContact.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire matériel {#SNMPVALUE}"
+            - uuid: f4831b97f6544264a134de6b2e5e5325
+              name: "Description de l'Equipement {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.1.{#SNMPINDEX}'
+              key: 'sysDescr.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire matériel {#SNMPVALUE}"
+            - uuid: 76739a88faf84bb78d7f7b5f8af7ef8f
+              name: 'Informations de Localisation du Pare-feu {#SNMPVALUE}'
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.6.{#SNMPINDEX}'
+              key: 'sysLocation.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire du matériel {#SNMPVALUE}"
+            - uuid: 815df59742974119bd2736490a85ee97
+              name: "Informations d'OID du Pare-feu {#SNMPVALUE}"
+              type: SNMP_AGENT
+              snmp_oid: '.1.3.6.1.2.1.1.2.{#SNMPINDEX}'
+              key: 'sysObjectID.[{#SNMPVALUE}]'
+              delay: '84600'
+              history: 60d
+              trends: '0'
+              value_type: CHAR
+              tags:
+                - tag: Application
+                  value: "Informations d'inventaire du matériel {#SNMPVALUE}"
+      valuemaps:
+        - uuid: cfd9fede39c642de8f8b8788d9863e2e
+          name: 'IF-MIB::ifOperStatus'
+          mappings:
+            - value: '1'
+              newvalue: up
+            - value: '2'
+              newvalue: down
+            - value: '3'
+              newvalue: testing
+            - value: '4'
+              newvalue: inconnu
+            - value: '5'
+              newvalue: 'en sommeil'
+            - value: '6'
+              newvalue: 'non présent'
+            - value: '7'
+              newvalue: 'couche inférieure en panne'
+  graphs:
+    - uuid: 0ea8c98cd4fa4afa85344950b18d15ac
+      name: '01- Disponibilité.'
+      graph_items:
+        - drawtype: GRADIENT_LINE
+          color: 1A7C11
+          item:
+            host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+            key: icmpping
+    - uuid: 49b40aebaa0744c09a6f69c48cc58b1b
+      name: '02- Latence.'
+      graph_items:
+        - drawtype: GRADIENT_LINE
+          color: 1A7C11
+          item:
+            host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+            key: icmppingsec
+    - uuid: dd23af2c943c46dd8d8118b5bf47ea06
+      name: '03- Perte de paquets.'
+      graph_items:
+        - drawtype: GRADIENT_LINE
+          color: 1A7C11
+          item:
+            host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+            key: icmppingloss
+    - uuid: 635431848f7d4735811c1c9eb9a68cd7
+      name: '04- Temps de fonctionnement.'
+      graph_items:
+        - drawtype: GRADIENT_LINE
+          color: 1A7C11
+          item:
+            host: SNMP_PAREFEU_KERIO_CONTROL_LLD_VERSION-1.0
+            key: sysUpTimeInstance.0
